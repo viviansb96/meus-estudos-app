@@ -210,8 +210,13 @@ export default function Home() {
 return (
     <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
       
-      {/* ELEMENTO DE ÁUDIO INVISÍVEL */}
-      <audio ref={audioRef} src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto" />
+      {/* ELEMENTO DE ÁUDIO INVISÍVEL - CORRIGIDO PARA MP3 UNIVERSAL */}
+      <audio 
+        ref={audioRef} 
+        src="https://assets.mixkit.co/active_storage/sfx/911/911-200.mp3" 
+        preload="auto" 
+        playsInline
+      />
 
       {/* COLUNA ESQUERDA - Timer e Atividade Rápida */}
       <div className="lg:col-span-2 space-y-6">
