@@ -159,17 +159,23 @@ export default function Home() {
     let interval: NodeJS.Timeout;
     
     if (isActive) {
-      // Registra o milissegundo exato em que o cronômetro iniciou o ciclo
+      // Salva o momento exato do início
       let lastTick = Date.now();
 
       interval = setInterval(() => {
         const now = Date.now();
-        // Calcula quantos segundos REAIS se passaram desde o último tick
-        // (Isso anula o efeito da aba "dormindo")
-        const secondsPassed = Math.round((now - lastTick) / 1000);
+        
+        // Pega a diferença real em milissegundos
+        const deltaMs = now - lastTick;
+        
+        // Descobre quantos SEGUNDOS INTEIROS cabem nessa diferença
+        const secondsPassed = Math.floor(deltaMs / 1000);
 
         if (secondsPassed > 0) {
-          lastTick = now; // Atualiza a marcação para o próximo ciclo
+          // O SEGREDO ESTÁ AQUI: Nós avançamos o "lastTick" APENAS na quantidade de 
+          // segundos exatos que estamos abatendo. Isso preserva qualquer milissegundo 
+          // "quebrado" para não atrasarmos nunca mais.
+          lastTick += (secondsPassed * 1000);
 
           setTime((prev) => {
             if (timerMode === 'pomodoro') { 
