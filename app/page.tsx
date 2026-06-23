@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, BookOpen, Flame, Play, Pause, RotateCcw, ChevronDown, CheckCircle2, Check, Timer, ArrowUpRight, Award, AlertTriangle, Edit2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BarChart, Calendar } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -9,6 +9,7 @@ import { Line } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler);
 
 export default function Home() {
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTask, setActiveTask] = useState('Selecione uma tarefa...');
   const [taskOptions, setTaskOptions] = useState<string[]>([]);
@@ -142,11 +143,15 @@ export default function Home() {
       .map((s: any) => new Date(s.createdAt).getDate())
   );
 
-  // --- CONTROLE DO CRONÔMETRO ---
+// --- CONTROLE DO CRONÔMETRO ---
   const playSound = () => {
-    const audio = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
-    audio.play().catch(e => console.log(e));
-    setTimeout(() => { audio.pause(); audio.currentTime = 0; }, 3000);
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(e => console.log("Erro de áudio:", e));
+      setTimeout(() => {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+      }, 3000);
+    }
   };
 
   useEffect(() => {
@@ -162,7 +167,17 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [isActive, timerMode]);
 
-  const toggleTimer = () => setIsActive(!isActive);
+  const toggleTimer = () => {
+    // Truque para desbloquear o áudio no celular:
+    // Toca e pausa no exato momento que o usuário clica em "Iniciar"
+    if (!isActive && audioRef.current) {
+      audioRef.current.play().then(() => {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+      }).catch(() => {});
+    }
+    setIsActive(!isActive);
+  };
+  
   const resetTimer = () => { setIsActive(false); setTime(timerMode === 'pomodoro' ? customPomodoroMinutes * 60 : 0); };
   const changeMode = (mode: 'pomodoro' | 'stopwatch') => { setTimerMode(mode); setIsActive(false); setTime(mode === 'pomodoro' ? customPomodoroMinutes * 60 : 0); };
   const formatTime = (seconds: number) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; };
@@ -192,9 +207,12 @@ export default function Home() {
   };
   const chartOptions = { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: true, grid: { color: '#1b362c' }, ticks: { color: '#94a3b8' } }, y: { display: true, beginAtZero: true, grid: { color: '#1b362c' }, ticks: { color: '#94a3b8', stepSize: 1 } } } };
 
-  return (
+return (
     <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
       
+      {/* ELEMENTO DE ÁUDIO INVISÍVEL */}
+      <audio ref={audioRef} src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto" />
+
       {/* COLUNA ESQUERDA - Timer e Atividade Rápida */}
       <div className="lg:col-span-2 space-y-6">
         

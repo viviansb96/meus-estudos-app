@@ -10,7 +10,7 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider localization={ptBR}>
-      <html lang="pt-BR">
+      <html lang="pt-BR" className="dark" style={{ colorScheme: 'dark' }}>
         {/* O fundo de toda a aplicação será um verde bem escuro */}
         <body className="bg-[#0b1713] text-slate-200 min-h-screen flex flex-col font-sans">
           
