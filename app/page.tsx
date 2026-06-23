@@ -366,20 +366,18 @@ return (
       <div className="space-y-6">
         
         {/* GRÁFICO DA SEMANA */}
-        <section className="bg-[#11241d] border border-[#1b362c] rounded-3xl p-6 sm:p-8 shadow-lg">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 mb-8">
-            
-            {/* Título isolado à esquerda - Um pouco menor (text-base) */}
+        <section className="bg-[#11241d] border border-[#1b362c] rounded-2xl p-6 shadow-lg">
+          
+          {/* CABEÇALHO EMPILHADO (Solução do Esmagamento) */}
+          <div className="flex flex-col gap-4 mb-6">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
               <BarChart size={18} className="text-emerald-500" /> Horas de Estudo na Semana
             </h3>
             
-            {/* Controles em Pílula à direita */}
             <div className="flex flex-wrap items-center gap-3">
               <div className="bg-[#0b1713] border border-[#1b362c] px-4 py-1.5 rounded-full text-sm font-bold text-emerald-400 shadow-sm">
                 Total: {weekHours}h {weekMinutes}m
               </div>
-              
               <div className="flex items-center bg-[#0b1713] border border-[#1b362c] rounded-full px-2 py-1 shadow-sm">
                 <button onClick={prevWeek} className="p-1.5 hover:bg-[#162c23] rounded-full transition-colors">
                   <ChevronLeft size={16} className="text-slate-400" />
@@ -392,7 +390,6 @@ return (
                 </button>
               </div>
             </div>
-            
           </div>
           
           <div className="h-40">
@@ -401,20 +398,18 @@ return (
         </section>
 
         {/* CALENDÁRIO MENSAL */}
-        <section className="bg-[#11241d] border border-[#1b362c] rounded-3xl p-6 sm:p-8 shadow-lg">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 mb-8">
-            
-            {/* Título isolado à esquerda - Um pouco menor (text-base) */}
+        <section className="bg-[#11241d] border border-[#1b362c] rounded-2xl p-6 shadow-lg">
+          
+          {/* CABEÇALHO EMPILHADO (Solução do Esmagamento) */}
+          <div className="flex flex-col gap-4 mb-6">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
               <Calendar size={18} className="text-emerald-500" /> Atividade do Mês
             </h3>
             
-            {/* Controles em Pílula à direita */}
             <div className="flex flex-wrap items-center gap-3">
               <div className="bg-[#0b1713] border border-[#1b362c] px-4 py-1.5 rounded-full text-sm font-bold text-emerald-400 shadow-sm">
                 Total: {monthHours}h {monthMinutes}m
               </div>
-              
               <div className="flex items-center bg-[#0b1713] border border-[#1b362c] rounded-full px-2 py-1 shadow-sm">
                 <button onClick={prevMonth} className="p-1.5 hover:bg-[#162c23] rounded-full transition-colors">
                   <ChevronLeft size={16} className="text-slate-400" />
@@ -427,8 +422,8 @@ return (
                 </button>
               </div>
             </div>
-            
           </div>
+
           <div className="grid grid-cols-7 gap-2">
             {['S','T','Q','Q','S','S','D'].map((d, index) => <div key={`header-day-${index}`} className="text-center text-xs text-slate-600 font-bold mb-2">{d}</div>)}
             
