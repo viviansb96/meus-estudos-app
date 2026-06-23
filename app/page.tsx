@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Clock, BookOpen, Flame, Play, Pause, RotateCcw, ChevronDown, CheckCircle2, Check, Timer, ArrowUpRight, Award, AlertTriangle, Edit2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, BookOpen, Flame, Play, Pause, RotateCcw, ChevronDown, CheckCircle2, Check, Timer, ArrowUpRight, Award, AlertTriangle, Edit2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BarChart, Calendar } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler);
 
@@ -84,12 +85,32 @@ export default function Home() {
   const getLocalDateStr = (d: Date | string) => new Date(d).toLocaleDateString('en-CA');
   const todayStr = new Date().toLocaleDateString('en-CA');
 
-  // 1. Estudos de Hoje
+// 1. Estudos de Hoje
   const todaySecs = studySessions
     .filter((s: any) => getLocalDateStr(s.createdAt) === todayStr)
     .reduce((acc, curr) => acc + curr.durationInSeconds, 0);
   const todayHours = Math.floor(todaySecs / 3600);
   const todayMinutes = Math.floor((todaySecs % 3600) / 60);
+
+  // 2. Estudos da Semana
+  const weekDStrs = new Set(weekDays.map(d => getLocalDateStr(d)));
+  const weekSecs = studySessions
+    .filter((s: any) => weekDStrs.has(getLocalDateStr(s.createdAt)))
+    .reduce((acc, curr) => acc + curr.durationInSeconds, 0);
+  const weekHours = Math.floor(weekSecs / 3600);
+  const weekMinutes = Math.floor((weekSecs % 3600) / 60);
+
+  // 3. Estudos do Mês
+  const monthSecs = studySessions
+    .filter((s: any) => {
+      const d = new Date(s.createdAt);
+      return d.getFullYear() === year && d.getMonth() === month;
+    })
+    .reduce((acc, curr) => acc + curr.durationInSeconds, 0);
+  const monthHours = Math.floor(monthSecs / 3600);
+  const monthMinutes = Math.floor((monthSecs % 3600) / 60);
+
+  
 
   // 2. Ofensiva Atual (Dias Consecutivos)
   const uniqueDates = new Set(studySessions.map((s: any) => getLocalDateStr(s.createdAt)));
@@ -271,19 +292,43 @@ export default function Home() {
 
         {/* CERTIFICAÇÕES EM ANDAMENTO */}
         <section className="bg-[#11241d] border border-[#1b362c] rounded-2xl p-6 shadow-lg">
-          <h3 className="text-xl font-semibold text-emerald-400 flex items-center gap-2 mb-4"><Award size={20} /> Em Andamento</h3>
-          <div className="space-y-3">
+          <h3 className="text-xl font-semibold text-emerald-400 flex items-center gap-2 mb-6"><Award size={20} /> Em Andamento</h3>
+          <div className="space-y-4">
             {activeCerts.length === 0 ? (
               <p className="text-sm text-slate-500 text-center py-4">Nenhum estudo em andamento no momento.</p>
             ) : (
               activeCerts.map((cert) => (
-                <div key={cert._id} className="flex items-center justify-between bg-[#0b1713] p-4 rounded-xl border border-[#1b362c] hover:border-emerald-500/30 transition-colors">
-                  <div>
-                    <span className="font-medium text-slate-200 block">{cert.name}</span>
-                    <span className="text-xs text-emerald-500/80">{cert.categoryId?.name || 'Sem categoria'}</span>
+                <div key={cert._id} className="flex flex-col md:flex-row md:items-center justify-between bg-[#0b1713] p-4 rounded-xl border border-[#1b362c] hover:border-emerald-500/40 transition-all gap-4 shadow-sm">
+                  <div className="flex-1">
+                    {/* NOME LIMPO: Apenas o nome da certificação */}
+                    <span className="font-semibold text-slate-100 text-lg">{cert.name}</span>
                   </div>
-                  <div className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10">
-                    Estudando
+                  <div className="flex flex-wrap items-center gap-3">
+                    
+                    {/* CAMPO DE PRAZO HARMONIZADO */}
+                    <div className="flex items-center gap-2 bg-[#11241d] px-3 py-2 rounded-lg border border-[#1b362c] hover:border-emerald-500/50 transition-colors group">
+                      <Calendar size={14} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                      <span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Prazo:</span>
+                      <input 
+                        type="date" 
+                        value={cert.endDate ? new Date(cert.endDate).toISOString().split('T')[0] : ''} 
+                        onChange={async (e) => {
+                          try {
+                            await fetch('/api/contents', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: cert._id, endDate: e.target.value })
+                            });
+                            fetchDashboardData(); 
+                          } catch(err) { console.error(err); }
+                        }}
+                        className="bg-transparent text-sm text-slate-200 outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert-[0.8]"
+                      />
+                    </div>
+
+                    <div className="px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 border border-emerald-400/20">
+                      Estudando
+                    </div>
                   </div>
                 </div>
               ))
@@ -291,28 +336,40 @@ export default function Home() {
           </div>
         </section>
 
+
       </div>
 
-      {/* COLUNA DIREITA - Gráficos e Calendário Navegáveis */}
+     {/* COLUNA DIREITA - Gráficos e Calendário Navegáveis */}
       <div className="space-y-6">
         
         {/* GRÁFICO DA SEMANA */}
-        <section className="bg-[#11241d] border border-[#1b362c] rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-semibold text-slate-400">Horas de Estudo</h3>
+        <section className="bg-[#11241d] border border-[#1b362c] rounded-3xl p-6 sm:p-8 shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 mb-8">
             
-            {/* Seletor de Semana com o mesmo visual do calendário */}
-            <div className="flex items-center gap-3">
-              <button onClick={prevWeek} className="text-slate-400 hover:text-emerald-400 transition-colors">
-                <ChevronLeft size={18} />
-              </button>
-              <span className="text-xs font-bold text-slate-200 w-32 text-center truncate">
-                {weekLabel}
-              </span>
-              <button onClick={nextWeek} className="text-slate-400 hover:text-emerald-400 transition-colors">
-                <ChevronRight size={18} />
-              </button>
+            {/* Título isolado à esquerda - Um pouco menor (text-base) */}
+            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+              <BarChart size={18} className="text-emerald-500" /> Horas de Estudo na Semana
+            </h3>
+            
+            {/* Controles em Pílula à direita */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="bg-[#0b1713] border border-[#1b362c] px-4 py-1.5 rounded-full text-sm font-bold text-emerald-400 shadow-sm">
+                Total: {weekHours}h {weekMinutes}m
+              </div>
+              
+              <div className="flex items-center bg-[#0b1713] border border-[#1b362c] rounded-full px-2 py-1 shadow-sm">
+                <button onClick={prevWeek} className="p-1.5 hover:bg-[#162c23] rounded-full transition-colors">
+                  <ChevronLeft size={16} className="text-slate-400" />
+                </button>
+                <span className="text-xs font-bold text-slate-300 w-32 text-center truncate">
+                  {weekLabel}
+                </span>
+                <button onClick={nextWeek} className="p-1.5 hover:bg-[#162c23] rounded-full transition-colors">
+                  <ChevronRight size={16} className="text-slate-400" />
+                </button>
+              </div>
             </div>
+            
           </div>
           
           <div className="h-40">
@@ -321,19 +378,34 @@ export default function Home() {
         </section>
 
         {/* CALENDÁRIO MENSAL */}
-        <section className="bg-[#11241d] border border-[#1b362c] rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CalendarIcon size={18} className="text-emerald-400" />
-              <h3 className="text-sm font-semibold text-slate-400">Atividade</h3>
+        <section className="bg-[#11241d] border border-[#1b362c] rounded-3xl p-6 sm:p-8 shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 mb-8">
+            
+            {/* Título isolado à esquerda - Um pouco menor (text-base) */}
+            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+              <Calendar size={18} className="text-emerald-500" /> Atividade do Mês
+            </h3>
+            
+            {/* Controles em Pílula à direita */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="bg-[#0b1713] border border-[#1b362c] px-4 py-1.5 rounded-full text-sm font-bold text-emerald-400 shadow-sm">
+                Total: {monthHours}h {monthMinutes}m
+              </div>
+              
+              <div className="flex items-center bg-[#0b1713] border border-[#1b362c] rounded-full px-2 py-1 shadow-sm">
+                <button onClick={prevMonth} className="p-1.5 hover:bg-[#162c23] rounded-full transition-colors">
+                  <ChevronLeft size={16} className="text-slate-400" />
+                </button>
+                <span className="text-xs font-bold text-slate-300 min-w-[100px] text-center">
+                  {monthNames[month]} {year}
+                </span>
+                <button onClick={nextMonth} className="p-1.5 hover:bg-[#162c23] rounded-full transition-colors">
+                  <ChevronRight size={16} className="text-slate-400" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={prevMonth} className="text-slate-400 hover:text-emerald-400 transition-colors"><ChevronLeft size={18} /></button>
-              <span className="text-xs font-bold text-slate-200 w-20 text-center">{monthNames[month]} {year}</span>
-              <button onClick={nextMonth} className="text-slate-400 hover:text-emerald-400 transition-colors"><ChevronRight size={18} /></button>
-            </div>
+            
           </div>
-          
           <div className="grid grid-cols-7 gap-2">
             {['S','T','Q','Q','S','S','D'].map((d, index) => <div key={`header-day-${index}`} className="text-center text-xs text-slate-600 font-bold mb-2">{d}</div>)}
             

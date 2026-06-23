@@ -15,24 +15,31 @@ export default function RootLayout({
         <body className="bg-[#0b1713] text-slate-200 min-h-screen flex flex-col font-sans">
           
           {/* TopBar (Barra de Navegação) */}
-          <header className="flex items-center justify-between px-6 py-4 bg-[#11241d] border-b border-[#1b362c]">
+          {/* TopBar (Barra de Navegação) */}
+          <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-[#11241d] border-b border-[#1b362c]">
+            
+            {/* Lado Esquerdo: Logo e Menu PC */}
             <div className="flex items-center gap-6">
-              <h1 className="text-xl font-bold text-emerald-400">StudyTracker</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-emerald-400">StudyTracker</h1>
               <nav className="hidden sm:flex gap-4">
                 <Link href="/" className="text-sm hover:text-emerald-400 transition-colors">Dashboard</Link>
                 <Link href="/estudos" className="text-sm hover:text-emerald-400 transition-colors">Estudos</Link>
               </nav>
             </div>
             
-            <div className="flex items-center gap-4">
-              {/* Navegação visível apenas no mobile */}
-              <Link href="/estudos" className="sm:hidden text-xs bg-[#1b362c] px-3 py-1.5 rounded-md text-emerald-400">
-                Estudos
-              </Link>
-              {/* Navegação visível apenas no mobile */}
-              <Link href="/conteudos" className="sm:hidden text-xs bg-[#1b362c] px-3 py-1.5 rounded-md text-emerald-400">
-                Conteúdos
-              </Link>
+            {/* Lado Direito: Menu Mobile e Avatar */}
+            <div className="flex items-center gap-3">
+              
+              {/* Navegação visível APENAS no mobile (sm:hidden) */}
+              <nav className="flex sm:hidden gap-2">
+                <Link href="/" className="px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-[#162c23] border border-emerald-500/20">
+                  Dash
+                </Link>
+                <Link href="/estudos" className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-[#0b1713] border border-[#1b362c] hover:border-emerald-500/50 hover:text-emerald-400 transition-all">
+                  Estudos
+                </Link>
+              </nav>
+              
               <UserButton />
             </div>
           </header>
