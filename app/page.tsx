@@ -9,6 +9,7 @@ import { Line } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler);
 
 export default function Home() {
+  const [isAlarming, setIsAlarming] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTask, setActiveTask] = useState('Selecione uma tarefa...');
@@ -156,12 +157,37 @@ export default function Home() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    
     if (isActive) {
+      // Registra o milissegundo exato em que o cronômetro iniciou o ciclo
+      let lastTick = Date.now();
+
       interval = setInterval(() => {
-        setTime((prev) => {
-          if (timerMode === 'pomodoro') { if (prev <= 1) { setIsActive(false); playSound(); return 0; } return prev - 1; } 
-          else { return prev + 1; }
-        });
+        const now = Date.now();
+        // Calcula quantos segundos REAIS se passaram desde o último tick
+        // (Isso anula o efeito da aba "dormindo")
+        const secondsPassed = Math.round((now - lastTick) / 1000);
+
+        if (secondsPassed > 0) {
+          lastTick = now; // Atualiza a marcação para o próximo ciclo
+
+          setTime((prev) => {
+            if (timerMode === 'pomodoro') { 
+              const newTime = prev - secondsPassed;
+              if (newTime <= 0) { 
+                setIsActive(false); 
+                playSound(); 
+                setIsAlarming(true);
+                setTimeout(() => setIsAlarming(false), 3000);
+                return 0; 
+              } 
+              return newTime; 
+            } 
+            else { 
+              return prev + secondsPassed; 
+            }
+          });
+        }
       }, 1000);
     }
     return () => clearInterval(interval);
