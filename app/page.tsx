@@ -210,10 +210,10 @@ export default function Home() {
 return (
     <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
       
-      {/* ELEMENTO DE ÁUDIO INVISÍVEL - CORRIGIDO PARA MP3 UNIVERSAL */}
+      {/* ELEMENTO DE ÁUDIO INVISÍVEL - FORMATO WAV UNIVERSAL E LINK DEFINITIVO */}
       <audio 
         ref={audioRef} 
-        src="https://assets.mixkit.co/active_storage/sfx/911/911-200.mp3" 
+        src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav" 
         preload="auto" 
         playsInline
       />
