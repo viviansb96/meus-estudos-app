@@ -15,14 +15,24 @@ export default function Home() {
   const [activeTask, setActiveTask] = useState('Selecione uma tarefa...');
   const [taskOptions, setTaskOptions] = useState<string[]>([]);
   
-  const [timerMode, setTimerMode] = useState<'pomodoro' | 'stopwatch'>('pomodoro');
+
+  // Estados novos de Interface e Segurança (Sem os tracinhos)
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  
+  // Modos do Cronômetro configurados para iniciar no modo Livre (stopwatch)
+  const [timerMode, setTimerMode] = useState<'pomodoro' | 'stopwatch'>('stopwatch');
   const [customPomodoroMinutes, setCustomPomodoroMinutes] = useState(25);
-  const [time, setTime] = useState(25 * 60);
+  const [time, setTime] = useState(0); // Começa em zero para o modo Livre
   const [isActive, setIsActive] = useState(false);
 
   // Novos Estados para o Backend
   const [activeCerts, setActiveCerts] = useState<any[]>([]);
   const [studySessions, setStudySessions] = useState<any[]>([]);
+
+  
 
   // Função central para puxar todos os dados
   const fetchDashboardData = async () => {
@@ -159,32 +169,33 @@ export default function Home() {
     let interval: NodeJS.Timeout;
     
     if (isActive) {
-      // Salva o momento exato do início
       let lastTick = Date.now();
 
       interval = setInterval(() => {
         const now = Date.now();
-        
-        // Pega a diferença real em milissegundos
         const deltaMs = now - lastTick;
-        
-        // Descobre quantos SEGUNDOS INTEIROS cabem nessa diferença
         const secondsPassed = Math.floor(deltaMs / 1000);
 
         if (secondsPassed > 0) {
-          // O SEGREDO ESTÁ AQUI: Nós avançamos o "lastTick" APENAS na quantidade de 
-          // segundos exatos que estamos abatendo. Isso preserva qualquer milissegundo 
-          // "quebrado" para não atrasarmos nunca mais.
           lastTick += (secondsPassed * 1000);
 
           setTime((prev) => {
             if (timerMode === 'pomodoro') { 
               const newTime = prev - secondsPassed;
+              
               if (newTime <= 0) { 
                 setIsActive(false); 
                 playSound(); 
                 setIsAlarming(true);
                 setTimeout(() => setIsAlarming(false), 3000);
+
+                // DISPARA A NOTIFICAÇÃO POR CIMA DE QUALQUER OUTRO APP
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                  new Notification('StudyTracker: Tempo Esgotado!', {
+                    body: 'Sua sessão regressiva de estudos chegou ao fim.',
+                  });
+                }
+
                 return 0; 
               } 
               return newTime; 
@@ -198,34 +209,70 @@ export default function Home() {
     }
     return () => clearInterval(interval);
   }, [isActive, timerMode]);
-
   const toggleTimer = () => {
-    // Truque para desbloquear o áudio no celular:
-    // Toca e pausa no exato momento que o usuário clica em "Iniciar"
+    // Truque para desbloquear o áudio no celular
     if (!isActive && audioRef.current) {
       audioRef.current.play().then(() => {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
       }).catch(() => {});
     }
+
+    // Pede permissão para mandar notificações fora do navegador se o usuário ainda não respondeu
+    if (!isActive && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
     setIsActive(!isActive);
   };
   
-  const resetTimer = () => { setIsActive(false); setTime(timerMode === 'pomodoro' ? customPomodoroMinutes * 60 : 0); };
+  // --- NOVAS FUNÇÕES DE RESET ---
+  const handleResetClick = () => setShowResetModal(true);
+
+  const confirmReset = () => {
+    setIsActive(false); 
+    setTime(timerMode === 'pomodoro' ? customPomodoroMinutes * 60 : 0);
+    setShowResetModal(false); 
+  };
+
+  // Mantém a mudança de modo e formatação intactas
   const changeMode = (mode: 'pomodoro' | 'stopwatch') => { setTimerMode(mode); setIsActive(false); setTime(mode === 'pomodoro' ? customPomodoroMinutes * 60 : 0); };
   const formatTime = (seconds: number) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; };
 
+  // --- NOVA FUNÇÃO DE SALVAR ---
   const saveSession = async () => {
+    if (isSaving) return; // Trava contra duplo clique
+
     const timeSpent = timerMode === 'pomodoro' ? (customPomodoroMinutes * 60) - time : time;
     if (timeSpent <= 0) return;
+    
+    setIsSaving(true); // Bloqueia o botão para evitar clique extra
+
     try {
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskName: activeTask, durationInSeconds: timeSpent })
       });
-      // Atualiza os gráficos na mesma hora após salvar!
-      if (res.ok) { alert('Sessão salva!'); resetTimer(); fetchDashboardData(); } 
-    } catch (error) { console.error(error); }
+      
+      if (res.ok) { 
+        // Notificação elegante (Toast) no lugar do alert()
+        setToastMessage('Sessão salva com sucesso!');
+        setTimeout(() => setToastMessage(''), 3000);
+        
+        // Zera o timer direto pelo código, sem chamar o Modal
+        setIsActive(false); 
+        setTime(timerMode === 'pomodoro' ? customPomodoroMinutes * 60 : 0);
+        
+        // Recarrega os gráficos na mesma hora
+        fetchDashboardData(); 
+      } 
+    } catch (error) { 
+      console.error(error); 
+    } finally {
+      setIsSaving(false); // Libera o botão novamente caso dê erro
+    }
   };
 
   // --- CONFIGURAÇÃO DO GRÁFICO (Injetando dados reais) ---
@@ -242,17 +289,45 @@ export default function Home() {
 return (
     <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
       
-      {/* ELEMENTO DE ÁUDIO INVISÍVEL - FORMATO WAV UNIVERSAL E LINK DEFINITIVO */}
-      <audio 
-        ref={audioRef} 
-        src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav" 
-        preload="auto" 
-        playsInline
-      />
+      {/* ELEMENTO DE ÁUDIO INVISÍVEL */}
+      <audio ref={audioRef} src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav" preload="auto" playsInline />
 
       {/* COLUNA ESQUERDA - Timer e Atividade Rápida */}
       <div className="lg:col-span-2 space-y-6">
-        
+
+        {/* --- NOTIFICAÇÃO TOAST INTEGRADA (Agora dentro da coluna, sem quebrar o grid) --- */}
+        {toastMessage && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] bg-emerald-500 text-[#0b1713] px-6 py-3 rounded-full font-bold shadow-[0_4px_20px_rgba(16,185,129,0.3)] flex items-center gap-2 animate-in slide-in-from-bottom-5 duration-300">
+            <CheckCircle2 size={20} />
+            {toastMessage}
+          </div>
+        )}
+
+        {/* --- MODAL DE CONFIRMAÇÃO DE ZERAR (Flutuando absoluto sobre a tela) --- */}
+        {showResetModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+            <div className="bg-[#11241d] border border-[#1b362c] p-6 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-red-500/10 rounded-full text-red-500">
+                  <AlertTriangle size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-white">Zerar Cronômetro?</h3>
+              </div>
+              <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                Você tem certeza que deseja zerar? O progresso atual que não foi salvo será perdido.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowResetModal(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-300 bg-[#0b1713] border border-[#1b362c] hover:bg-[#162c23] hover:text-white transition-all">
+                  Cancelar
+                </button>
+                <button onClick={confirmReset} className="px-5 py-2.5 rounded-xl font-bold text-white bg-red-600/90 hover:bg-red-500 transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)]">
+                  Sim, Zerar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TIMER */}
         <section className="bg-[#11241d] border border-[#1b362c] rounded-2xl p-6 shadow-lg">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
@@ -320,12 +395,20 @@ return (
               <button onClick={toggleTimer} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-[#0b1713] font-bold text-lg px-8 py-3 rounded-xl transition-all">
                 {isActive ? 'Pausar' : 'Iniciar'}
               </button>
-              <button onClick={resetTimer} className="flex items-center gap-2 bg-[#1b362c] hover:bg-[#234539] text-slate-300 font-medium px-6 py-3 rounded-xl border border-[#2a5042] transition-all">
+              <button onClick={handleResetClick} className="flex items-center gap-2 bg-[#1b362c] hover:bg-[#234539] text-slate-300 font-medium px-6 py-3 rounded-xl border border-[#2a5042] transition-all">
                 Zerar
               </button>
               {((timerMode === 'pomodoro' && time < customPomodoroMinutes * 60) || (timerMode === 'stopwatch' && time > 0)) && (
-                <button onClick={saveSession} className="flex items-center gap-2 bg-emerald-900/40 hover:bg-emerald-900/60 text-emerald-400 font-medium px-6 py-3 rounded-xl border border-emerald-800 transition-all">
-                  Salvar Sessão
+                <button 
+                  onClick={saveSession} 
+                  disabled={isSaving}
+                  className={`flex items-center gap-2 font-medium px-6 py-3 rounded-xl border transition-all ${
+                    isSaving 
+                      ? 'bg-[#1b362c] border-[#1b362c] text-slate-500 cursor-not-allowed' 
+                      : 'bg-emerald-900/40 hover:bg-emerald-900/60 text-emerald-400 border-emerald-800'
+                  }`}
+                >
+                  {isSaving ? 'Salvando...' : 'Salvar Sessão'}
                 </button>
               )}
             </div>
