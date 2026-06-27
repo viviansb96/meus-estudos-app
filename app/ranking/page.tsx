@@ -7,6 +7,7 @@ interface RankUser {
   rank: number;
   name: string;
   hours: number;
+  hoursToday: number; // NOVO: Campo de horas acumuladas hoje
   streak?: number;
   imageUrl?: string; // NOVO: Campo da foto do perfil!
   isWinner?: boolean;
@@ -85,7 +86,7 @@ export default function RankingPage() {
               <Zap size={22} /> Classificação em Tempo Real
             </h3>
 
-            {/* LISTA CORRIDA (Aumentamos o espaço entre eles com space-y-6) */}
+            {/* LISTA CORRIDA LIMPA E PROFISSIONAL */}
             <div className="space-y-6">
               {leaderboard.length === 0 ? (
                 <p className="text-slate-500 text-center text-base py-8">Ainda sem dados registrados nesta quinzena.</p>
@@ -114,7 +115,7 @@ export default function RankingPage() {
                           {idx + 1}
                         </span>
 
-                        {/* FOTO DO PERFIL (AVATAR) - TAMANHO TRAVADO COM STYLE */}
+                        {/* FOTO DO PERFIL (AVATAR) */}
                         {user.imageUrl ? (
                           <img 
                             src={user.imageUrl} 
@@ -139,22 +140,30 @@ export default function RankingPage() {
                         </div>
                       </div>
 
-                      {/* Lado Direito: Ofensiva e Horas com largura fixa */}
-                      <div className="flex items-center justify-end gap-6 sm:gap-8 shrink-0">
+                      {/* Lado Direito: Ofensiva, Hoje e Total com largura alinhada */}
+                      <div className="flex items-center justify-end gap-5 sm:gap-8 shrink-0">
                         
                         {/* Foguinho da Ofensiva */}
-                        <div className="hidden sm:flex items-center gap-1.5 w-16 justify-end" title="Dias seguidos de estudo">
+                        <div className="hidden sm:flex items-center gap-1.5 w-14 justify-end" title="Dias seguidos de estudo">
                           <Flame size={18} className={userStreak > 0 ? "text-orange-500" : "text-slate-600"} />
                           <span className={`font-bold text-sm ${userStreak > 0 ? "text-orange-400" : "text-slate-600"}`}>
                             {userStreak}
                           </span>
                         </div>
 
-                        {/* Relógio e Horas alinhados à direita */}
-                        <div className="flex items-center justify-end gap-2 w-24">
-                          <Clock size={16} className="text-slate-500 shrink-0" />
-                          <span className="font-black text-emerald-400 text-base sm:text-lg">
-                            {user.hours} <span className="text-xs sm:text-sm text-slate-500 font-medium">h</span>
+                        {/* Tempo de Hoje */}
+                        <div className="flex flex-col items-end justify-center w-16" title="Tempo estudado hoje">
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Hoje</span>
+                          <span className={`font-bold text-sm ${user.hoursToday > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+                            {user.hoursToday}h
+                          </span>
+                        </div>
+
+                        {/* Tempo da Quinzena (Total) */}
+                        <div className="flex flex-col items-end justify-center w-20" title="Total acumulado na quinzena">
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Total</span>
+                          <span className="font-black text-slate-100 text-base">
+                            {user.hours}h
                           </span>
                         </div>
 

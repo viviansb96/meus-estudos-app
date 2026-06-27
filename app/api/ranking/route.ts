@@ -15,6 +15,7 @@ export async function GET() {
     const currentMonth = now.getMonth();
     const currentDay = now.getDate();
 
+    // 1. LIMITES DA QUINZENA
     let startDate: Date;
     let endDate: Date;
     let label = '';
@@ -34,7 +35,10 @@ export async function GET() {
     const diffTime = endDate.getTime() - now.getTime();
     const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-    // BUSCA USUÁRIOS E FOTOS NO CLERK
+    // 2. LIMITE DO DIA DE HOJE (Meia-noite local)
+    const startOfToday = new Date(currentYear, currentMonth, currentDay, 0, 0, 0);
+
+    // 3. BUSCA USUÁRIOS NO CLERK
     const client = await clerkClient();
     const clerkUsersResponse = await client.users.getUserList({ limit: 100 });
     const userMap = new Map<string, { name: string; image: string }>();
@@ -43,10 +47,11 @@ export async function GET() {
       const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ');
       userMap.set(u.id, {
         name: fullName || 'Especialista Anônimo',
-        image: u.imageUrl || '' // Puxa a foto do perfil oficial!
+        image: u.imageUrl || ''
       });
     });
 
+    // 4. OFENSIVAS
     const allSessions = await StudySession.find({}, 'userId createdAt').lean();
     const userDates = new Map<string, Set<string>>();
     
@@ -57,7 +62,7 @@ export async function GET() {
       userDates.get(uId)?.add(dateStr);
     });
 
-    const todayStr = new Date().toLocaleDateString('en-CA');
+    const todayStr = now.toLocaleDateString('en-CA');
     const yesterdayDate = new Date();
     yesterdayDate.setDate(yesterdayDate.getDate() - 1);
     const yesterdayStr = yesterdayDate.toLocaleDateString('en-CA');
@@ -85,6 +90,18 @@ export async function GET() {
       userStreaks.set(uId, streak);
     });
 
+    // 5. CÁLCULO DAS HORAS DE HOJE POR USUÁRIO
+    const todaySessionsAggregate = await StudySession.aggregate([
+      { $match: { createdAt: { $gte: startOfToday } } },
+      { $group: { _id: '$userId', totalSeconds: { $sum: '$durationInSeconds' } } }
+    ]);
+
+    const todayHoursMap = new Map<string, number>();
+    todaySessionsAggregate.forEach(item => {
+      todayHoursMap.set(item._id, Number((item.totalSeconds / 3600).toFixed(1)));
+    });
+
+    // 6. AGREGAÇÃO DAS HORAS DA QUINZENA
     const sessionsAggregate = await StudySession.aggregate([
       { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: '$userId', totalSeconds: { $sum: '$durationInSeconds' } } },
@@ -96,8 +113,9 @@ export async function GET() {
       return { 
         rank: index + 1, 
         name: userData.name, 
-        imageUrl: userData.image, // Injeta a imagem no ranking
-        hours: Number((item.totalSeconds / 3600).toFixed(1)), 
+        imageUrl: userData.image, 
+        hours: Number((item.totalSeconds / 3600).toFixed(1)),
+        hoursToday: todayHoursMap.get(item._id) || 0, // Injeta as horas de hoje!
         streak: userStreaks.get(item._id) || 0 
       };
     });
@@ -111,6 +129,7 @@ export async function GET() {
           name: fullName || 'Membro do Time',
           imageUrl: u.imageUrl || '',
           hours: 0,
+          hoursToday: todayHoursMap.get(u.id) || 0,
           streak: userStreaks.get(u.id) || 0
         });
       }
@@ -119,7 +138,7 @@ export async function GET() {
     leaderboard.sort((a, b) => b.hours - a.hours);
     leaderboard.forEach((item, index) => item.rank = index + 1);
 
-    // RELATÓRIO ANTERIOR
+    // 7. RELATÓRIO DA QUINZENA ANTERIOR
     let lastStartDate: Date;
     let lastEndDate: Date;
     let lastLabel = '';
