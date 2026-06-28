@@ -35,8 +35,12 @@ export async function GET() {
     const diffTime = endDate.getTime() - now.getTime();
     const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-    // 2. LIMITE DO DIA DE HOJE (Meia-noite local)
-    const startOfToday = new Date(currentYear, currentMonth, currentDay, 0, 0, 0);
+// 2. LIMITE DO DIA DE HOJE AJUSTADO PARA O FUSO DO BRASIL (GMT-3)
+    // Criamos a data atual convertida para o texto local do Brasil (ano-mês-dia)
+    const dateInBrazil = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    
+    // Forçamos o início do dia a ser exatamente às 00:00:00 no fuso de Brasília, convertido para UTC
+    const startOfToday = new Date(`${dateInBrazil}T00:00:00-03:00`);
 
     // 3. BUSCA USUÁRIOS NO CLERK
     const client = await clerkClient();
