@@ -80,15 +80,25 @@ export default function Home() {
   const blanks = Array.from({ length: startDayIndex }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  // --- PARTE DA SEMANA CORRIGIDA ABAIXO ---
   const prevWeek = () => setWeekOffset(prev => prev - 1);
   const nextWeek = () => setWeekOffset(prev => prev + 1);
+  
   const getWeekDays = (offset: number) => {
     const curr = new Date();
     const first = curr.getDate() - curr.getDay() + (curr.getDay() === 0 ? -6 : 1) + (offset * 7);
     const week = [];
-    for (let i = 0; i < 7; i++) week.push(new Date(curr.setDate(first + i)));
+    
+    for (let i = 0; i < 7; i++) {
+      // Cria um clone independente do dia atual para não corromper o 'curr' original na virada do mês
+      const day = new Date(curr.getTime());
+      day.setDate(first + i);
+      week.push(day);
+    }
+    
     return week;
   };
+  
   const weekDays = getWeekDays(weekOffset);
   const weekLabel = `Semana de ${weekDays[0].getDate()}/${weekDays[0].getMonth() + 1} a ${weekDays[6].getDate()}/${weekDays[6].getMonth() + 1}`;
 
